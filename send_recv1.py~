@@ -9,7 +9,7 @@ import random
 
 context = zmq.Context()
 socket = context.socket(zmq.PUB)
-socket.bind("tcp://*:5556")
+socket.bind("ipc:///tmp/scl_70011")
 
 i = Interface('/dev/ttyACM0')
 
@@ -18,15 +18,11 @@ mcounter = 0
 def send_msg():
 	global mcounter	
 	global i	
-	mFlag = 1	
-	mType = 'ab'
-	msenderID = 2
-	mspeed = 40.5	
-	mheading = 90
-	mpayload = 'helworld'
-		
+	prefix = [0x00,0x56,0x00,0x00,0x00,0x00]
+	payload = [5,2,3,1]
+			
 	while 1:
-		myMessage = msgpack.packb([mFlag,mType,msenderID,mspeed,mheading,mpayload,mcounter])
+		myMessage = msgpack.packb([prefix,payload])
 		i.send(myMessage)
 		mcounter += 1
 		sleep(0.1)
@@ -36,18 +32,13 @@ def receive_msg():
 	global i
 	while 1:
 		data = i.receive()
+		#print len(data)		
+		socket.send(data)
 		unp.feed(data)
 		for msg in unp:
 			if type(msg) is tuple:
 				print msg
-				if len(msg) == 7:
-					if(msg[1] is 'aa'):
-						socket.send(msg[5])
-			#	else:
-			#		print 'garbage type 1', msg 
-			#else:
-			#	print 'garbage type 2', msg 
-	
+					
 try:
 	thread.start_new_thread(receive_msg, () )
 	thread.start_new_thread(send_msg, () )
